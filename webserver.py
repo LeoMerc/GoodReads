@@ -218,7 +218,7 @@ class HandlerWebRequest(BaseHTTPRequestHandler):
 
 
 def set_redis_data():
-    r = redis.StrictRedis(host=os.getenv("REDIS_HOST"), port=6379, db=0)
+    r = redis.StrictRedis(host="54.208.218.224", port=6379, db=0)
     directory = "html/books"
 
     for file_name in os.listdir(directory):
@@ -245,7 +245,7 @@ def set_redis_data():
 
 if __name__ == "__main__":
     print("Server starting...")
-    server = HTTPServer(("54.208.218.224", 80), HandlerWebRequest)
+    server = HTTPServer(("0.0.0.0", 80), HandlerWebRequest)
 
     print("Server running...")
 
