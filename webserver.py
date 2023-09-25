@@ -16,7 +16,7 @@ load_dotenv()
 
 mapping = [
     (r"^/api/books/search", "get_api_search"),
-    (r"^/api/books/suggestion", "get_book_suggestion"),
+    (r"^/api/books/suggestion", "get_suggestion"),
     (r"^/api/books$", "get_books"),
     (r"^/books/(?P<book_file>.+)$", "get_book"),
     (r"^/$", "get_index"),
