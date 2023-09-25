@@ -46,9 +46,9 @@ class HandlerWebRequest(BaseHTTPRequestHandler):
         return c.get("session").value
 
     def get_suggestion(self):
-        session_id = self.get_session()
+        session_id = self.get_book_session()
         r = redis.StrictRedis(
-            host="54.208.218.224",
+            host=os.getenv("54.208.218.224"),
             port=6379,
             db=0,
             charset="utf-8",
@@ -82,6 +82,7 @@ class HandlerWebRequest(BaseHTTPRequestHandler):
         self.send_response(200)
         self.end_headers()
         self.wfile.write(json_data.encode("utf-8"))
+
 
     def get_book(self, book_file):
         self.url = urlparse(self.path)
