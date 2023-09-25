@@ -48,7 +48,7 @@ class HandlerWebRequest(BaseHTTPRequestHandler):
     def get_suggestion(self):
         session_id = self.get_session()
         r = redis.StrictRedis(
-            host=os.getenv("REDIS_HOST"),
+            host=os.getenv("54.208.218.224"),
             port=6379,
             db=0,
             charset="utf-8",
@@ -86,7 +86,7 @@ class HandlerWebRequest(BaseHTTPRequestHandler):
     def get_book(self, book_file):
         self.url = urlparse(self.path)
         r = redis.StrictRedis(
-            host=os.getenv("REDIS_HOST"),
+            host=os.getenv("54.208.218.224"),
             port=6379,
             db=0,
             charset="utf-8",
@@ -147,7 +147,7 @@ class HandlerWebRequest(BaseHTTPRequestHandler):
                 return
 
             r = redis.StrictRedis(
-                host=os.getenv("REDIS_HOST"),
+                host=os.getenv("54.208.218.224"),
                 port=6379,
                 db=0,
                 charset="utf-8",
