@@ -2,7 +2,7 @@ from functools import cached_property
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import parse_qsl, urlparse
-from utils import CustomHTMLParser, get_formatted_book
+from utils import CustomHTMLParser, retrieve_format_book
 import re
 import os
 import redis
@@ -126,7 +126,7 @@ class WebRequestHandler(BaseHTTPRequestHandler):
 
         for book in books:
             book_content = r.get(book)
-            response.append(get_formatted_book(book_content, book))
+            response.append(retrieve_format_book(book_content, book))
 
         r.connection_pool.disconnect()
         json_data = json.dumps({"books": response})
@@ -190,7 +190,7 @@ class WebRequestHandler(BaseHTTPRequestHandler):
                     if book_name.lower() in book_name_parser.data[0].lower():
                         if not isFound:
                             isFound = True
-                            books_found.append(get_formatted_book(book_content, book))
+                            books_found.append(retrieve_format_book(book_content, book))
 
                 if author and author != "":
                     author_parser = CustomHTMLParser("p", "author")
@@ -198,7 +198,7 @@ class WebRequestHandler(BaseHTTPRequestHandler):
                     if author.lower() in author_parser.data[0].lower():
                         if not isFound:
                             isFound = True
-                            books_found.append(get_formatted_book(book_content, book))
+                            books_found.append(retrieve_format_book(book_content, book))
 
                 if description and description != "":
                     description_parser = CustomHTMLParser("p", "description")
@@ -206,7 +206,7 @@ class WebRequestHandler(BaseHTTPRequestHandler):
                     if description.lower() in description_parser.data[0].lower():
                         if not isFound:
                             isFound = True
-                            books_found.append(get_formatted_book(book_content, book))
+                            books_found.append(retrieve_format_book(book_content, book))
 
             r.connection_pool.disconnect()
             json_data = json.dumps({"books": books_found})
