@@ -2,7 +2,7 @@ from functools import cached_property
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import parse_qsl, urlparse
-from utils import CustomHTMLParser, retrieve_format_book
+from utils import CustomHTMLParser, get_formatted_book
 import re
 import os
 import redis
@@ -16,7 +16,8 @@ load_dotenv()
 
 mapping = [
     (r"^/api/books/search", "get_api_search"),
-    (r"^/api/books/suggestion", "get_suggestion"),
+    (r"^/api/books/suggestion", "get_book_suggestion"),
+    (r"^/api/books$", "get_books"),
     (r"^/books/(?P<book_file>.+)$", "get_book"),
     (r"^/$", "get_index"),
     (r"^/index$", "get_index"),
@@ -24,18 +25,18 @@ mapping = [
 ]
 
 
-class HandlerWebRequest(BaseHTTPRequestHandler):
+class WebRequestHandler(BaseHTTPRequestHandler):
     @cached_property
     def cookies(self):
         return SimpleCookie(self.headers.get("Cookie"))
 
-    def set_cookie(self, session_id, max_age=100):
+    def set_book_cookie(self, session_id, max_age=100):
         c = SimpleCookie()
         c["session"] = session_id
         c["session"]["max-age"] = max_age
         self.send_header("Set-Cookie", c.output(header=""))
 
-    def get_session(self):
+    def get_book_session(self):
         c = self.cookies
         if not c or not c.get("session"):
             print("No cookie")
@@ -45,10 +46,10 @@ class HandlerWebRequest(BaseHTTPRequestHandler):
             print("Cookie found")
         return c.get("session").value
 
-    def get_suggestion(self):
+    def get_book_suggestion(self):
         session_id = self.get_book_session()
         r = redis.StrictRedis(
-            host=os.getenv("54.208.218.224"),
+            host="54.208.218.224",
             port=6379,
             db=0,
             charset="utf-8",
@@ -83,7 +84,6 @@ class HandlerWebRequest(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(json_data.encode("utf-8"))
 
-
     def get_book(self, book_file):
         self.url = urlparse(self.path)
         r = redis.StrictRedis(
@@ -94,7 +94,7 @@ class HandlerWebRequest(BaseHTTPRequestHandler):
             decode_responses=True,
         )
 
-        session_id = self.get_session()
+        session_id = self.get_book_session()
         books_read = r.lrange(session_id, 0, -1)
 
         # Get data from redis
@@ -107,29 +107,50 @@ class HandlerWebRequest(BaseHTTPRequestHandler):
         r.connection_pool.disconnect()
 
         # Set response
-        self.set_cookie(session_id)
+        self.set_book_cookie(session_id)
         self.send_response(200)
         # Write headers
         self.wfile.write(book.encode("utf-8"))
 
-    
+    def get_books(self):
+        r = redis.StrictRedis(
+            host="54.208.218.224",
+            port=6379,
+            db=0,
+            charset="utf-8",
+            decode_responses=True,
+        )
 
-    def get_index(self):
-        self.search_by_name("html/index.html")
+        books = r.keys("book*")
+        response = []
 
-    def get_search(self):
-        self.search_by_name("html/search.html")
-    
-    def search_by_name(self, file_name):
+        for book in books:
+            book_content = r.get(book)
+            response.append(get_formatted_book(book_content, book))
+
+        r.connection_pool.disconnect()
+        json_data = json.dumps({"books": response})
+
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(json_data.encode("utf-8"))
+
+    def get_by_file_name(self, file_name):
         self.send_response(200)
         self.send_header("Content-Type", "text/html")
-        session_id = self.get_session()
-        self.set_cookie(session_id)
+        session_id = self.get_book_session()
+        self.set_book_cookie(session_id)
         self.end_headers()
 
         with open(file_name, "r") as f:
             response = f.read()
         return self.wfile.write(response.encode("utf-8"))
+
+    def get_index(self):
+        self.get_by_file_name("html/index.html")
+
+    def get_search(self):
+        self.get_by_file_name("html/search.html")
 
     def get_api_search(self):
         try:
@@ -169,7 +190,7 @@ class HandlerWebRequest(BaseHTTPRequestHandler):
                     if book_name.lower() in book_name_parser.data[0].lower():
                         if not isFound:
                             isFound = True
-                            books_found.append(retrieve_format_book(book_content))
+                            books_found.append(get_formatted_book(book_content, book))
 
                 if author and author != "":
                     author_parser = CustomHTMLParser("p", "author")
@@ -177,7 +198,7 @@ class HandlerWebRequest(BaseHTTPRequestHandler):
                     if author.lower() in author_parser.data[0].lower():
                         if not isFound:
                             isFound = True
-                            books_found.append(retrieve_format_book(book_content))
+                            books_found.append(get_formatted_book(book_content, book))
 
                 if description and description != "":
                     description_parser = CustomHTMLParser("p", "description")
@@ -185,7 +206,7 @@ class HandlerWebRequest(BaseHTTPRequestHandler):
                     if description.lower() in description_parser.data[0].lower():
                         if not isFound:
                             isFound = True
-                            books_found.append(retrieve_format_book(book_content))
+                            books_found.append(get_formatted_book(book_content, book))
 
             r.connection_pool.disconnect()
             json_data = json.dumps({"books": books_found})
@@ -246,7 +267,7 @@ def set_redis_data():
 
 if __name__ == "__main__":
     print("Server starting...")
-    server = HTTPServer(("0.0.0.0", 80), HandlerWebRequest)
+    server = HTTPServer(("0.0.0.0", 80), WebRequestHandler)
 
     print("Server running...")
 
