@@ -99,5 +99,5 @@ mapping = [(r"^/books/(?P<book_id>\d+)$", "get_book"), (r"^/$", "get_index")]
 
 if __name__ == "__main__":
     print("Server starting...")
-    server = HTTPServer(("0.0.0.0", 8000), WebRequestHandler)
+    server = HTTPServer(("54.208.218.224", 8000), WebRequestHandler)
     server.serve_forever()
