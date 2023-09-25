@@ -2,7 +2,7 @@ from functools import cached_property
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import parse_qsl, urlparse
-from utils import CustomHTMLParser, get_formatted_book
+from utils import CustomHTMLParser, retrieve_format_book
 import re
 import os
 import redis
@@ -30,13 +30,13 @@ class WebRequestHandler(BaseHTTPRequestHandler):
     def cookies(self):
         return SimpleCookie(self.headers.get("Cookie"))
 
-    def set_book_cookie(self, session_id, max_age=100):
+    def set_cookie(self, session_id, max_age=100):
         c = SimpleCookie()
         c["session"] = session_id
         c["session"]["max-age"] = max_age
         self.send_header("Set-Cookie", c.output(header=""))
 
-    def get_book_session(self):
+    def get_session(self):
         c = self.cookies
         if not c or not c.get("session"):
             print("No cookie")
@@ -46,8 +46,8 @@ class WebRequestHandler(BaseHTTPRequestHandler):
             print("Cookie found")
         return c.get("session").value
 
-    def get_book_suggestion(self):
-        session_id = self.get_book_session()
+    def get_suggestion(self):
+        session_id = self.get_session()
         r = redis.StrictRedis(
             host=os.getenv("54.208.218.224"),
             port=6379,
@@ -94,7 +94,7 @@ class WebRequestHandler(BaseHTTPRequestHandler):
             decode_responses=True,
         )
 
-        session_id = self.get_book_session()
+        session_id = self.get_session()
         books_read = r.lrange(session_id, 0, -1)
 
         # Get data from redis
@@ -107,7 +107,7 @@ class WebRequestHandler(BaseHTTPRequestHandler):
         r.connection_pool.disconnect()
 
         # Set response
-        self.set_book_cookie(session_id)
+        self.set_cookie(session_id)
         self.send_response(200)
         # Write headers
         self.wfile.write(book.encode("utf-8"))
@@ -126,7 +126,7 @@ class WebRequestHandler(BaseHTTPRequestHandler):
 
         for book in books:
             book_content = r.get(book)
-            response.append(get_formatted_book(book_content, book))
+            response.append(retrieve_format_book(book_content, book))
 
         r.connection_pool.disconnect()
         json_data = json.dumps({"books": response})
@@ -135,11 +135,11 @@ class WebRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(json_data.encode("utf-8"))
 
-    def get_by_file_name(self, file_name):
+    def get_by_name(self, file_name):
         self.send_response(200)
         self.send_header("Content-Type", "text/html")
-        session_id = self.get_book_session()
-        self.set_book_cookie(session_id)
+        session_id = self.get_session()
+        self.set_cookie(session_id)
         self.end_headers()
 
         with open(file_name, "r") as f:
@@ -147,10 +147,10 @@ class WebRequestHandler(BaseHTTPRequestHandler):
         return self.wfile.write(response.encode("utf-8"))
 
     def get_index(self):
-        self.get_by_file_name("html/index.html")
+        self.get_by_name("html/index.html")
 
     def get_search(self):
-        self.get_by_file_name("html/search.html")
+        self.get_by_name("html/search.html")
 
     def get_api_search(self):
         try:
@@ -190,7 +190,7 @@ class WebRequestHandler(BaseHTTPRequestHandler):
                     if book_name.lower() in book_name_parser.data[0].lower():
                         if not isFound:
                             isFound = True
-                            books_found.append(get_formatted_book(book_content, book))
+                            books_found.append(retrieve_format_book(book_content, book))
 
                 if author and author != "":
                     author_parser = CustomHTMLParser("p", "author")
@@ -198,7 +198,7 @@ class WebRequestHandler(BaseHTTPRequestHandler):
                     if author.lower() in author_parser.data[0].lower():
                         if not isFound:
                             isFound = True
-                            books_found.append(get_formatted_book(book_content, book))
+                            books_found.append(retrieve_format_book(book_content, book))
 
                 if description and description != "":
                     description_parser = CustomHTMLParser("p", "description")
@@ -206,7 +206,7 @@ class WebRequestHandler(BaseHTTPRequestHandler):
                     if description.lower() in description_parser.data[0].lower():
                         if not isFound:
                             isFound = True
-                            books_found.append(get_formatted_book(book_content, book))
+                            books_found.append(retrieve_format_book(book_content, book))
 
             r.connection_pool.disconnect()
             json_data = json.dumps({"books": books_found})

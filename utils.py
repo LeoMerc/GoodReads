@@ -25,7 +25,7 @@ class CustomHTMLParser(HTMLParser):
             self.data.append(data)
 
 
-def get_formatted_book(book, book_key):
+def retrieve_format_book(book, book_key):
     try:
         book_name_parser = CustomHTMLParser(("h2"), ("title"))
         book_name_parser.feed(book)
