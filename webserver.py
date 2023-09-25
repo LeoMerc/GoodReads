@@ -2,7 +2,7 @@ from functools import cached_property
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import parse_qsl, urlparse
-from utils import CustomHTMLParser, retrieve_format_book
+from utils import CustomHTMLParser, get_formatted_book
 import re
 import os
 import redis
@@ -49,7 +49,7 @@ class WebRequestHandler(BaseHTTPRequestHandler):
     def get_book_suggestion(self):
         session_id = self.get_book_session()
         r = redis.StrictRedis(
-            host="54.208.218.224",
+            host=os.getenv("54.208.218.224"),
             port=6379,
             db=0,
             charset="utf-8",
@@ -87,7 +87,7 @@ class WebRequestHandler(BaseHTTPRequestHandler):
     def get_book(self, book_file):
         self.url = urlparse(self.path)
         r = redis.StrictRedis(
-            host="54.208.218.224",
+            host=os.getenv("54.208.218.224"),
             port=6379,
             db=0,
             charset="utf-8",
@@ -114,7 +114,7 @@ class WebRequestHandler(BaseHTTPRequestHandler):
 
     def get_books(self):
         r = redis.StrictRedis(
-            host="54.208.218.224",
+            host=os.getenv("54.208.218.224"),
             port=6379,
             db=0,
             charset="utf-8",
@@ -126,7 +126,7 @@ class WebRequestHandler(BaseHTTPRequestHandler):
 
         for book in books:
             book_content = r.get(book)
-            response.append(retrieve_format_book(book_content, book))
+            response.append(get_formatted_book(book_content, book))
 
         r.connection_pool.disconnect()
         json_data = json.dumps({"books": response})
@@ -169,7 +169,7 @@ class WebRequestHandler(BaseHTTPRequestHandler):
                 return
 
             r = redis.StrictRedis(
-                host="54.208.218.224",
+                host=os.getenv("54.208.218.224"),
                 port=6379,
                 db=0,
                 charset="utf-8",
@@ -190,7 +190,7 @@ class WebRequestHandler(BaseHTTPRequestHandler):
                     if book_name.lower() in book_name_parser.data[0].lower():
                         if not isFound:
                             isFound = True
-                            books_found.append(retrieve_format_book(book_content, book))
+                            books_found.append(get_formatted_book(book_content, book))
 
                 if author and author != "":
                     author_parser = CustomHTMLParser("p", "author")
@@ -198,7 +198,7 @@ class WebRequestHandler(BaseHTTPRequestHandler):
                     if author.lower() in author_parser.data[0].lower():
                         if not isFound:
                             isFound = True
-                            books_found.append(retrieve_format_book(book_content, book))
+                            books_found.append(get_formatted_book(book_content, book))
 
                 if description and description != "":
                     description_parser = CustomHTMLParser("p", "description")
@@ -206,7 +206,7 @@ class WebRequestHandler(BaseHTTPRequestHandler):
                     if description.lower() in description_parser.data[0].lower():
                         if not isFound:
                             isFound = True
-                            books_found.append(retrieve_format_book(book_content, book))
+                            books_found.append(get_formatted_book(book_content, book))
 
             r.connection_pool.disconnect()
             json_data = json.dumps({"books": books_found})
@@ -240,7 +240,7 @@ class WebRequestHandler(BaseHTTPRequestHandler):
 
 
 def set_redis_data():
-    r = redis.StrictRedis(host="54.208.218.224", port=6379, db=0)
+    r = redis.StrictRedis(host=os.getenv("54.208.218.224"), port=6379, db=0)
     directory = "html/books"
 
     for file_name in os.listdir(directory):

@@ -10,10 +10,6 @@ class CustomHTMLParser(HTMLParser):
         self.tagArray = tagArray
         self.tagValue = tagValue
 
-    def handle_data(self, data):
-        if self.capture:
-            self.data.append(data)
-
     def handle_starttag(self, tag, attrs):
         if tag in self.tagArray:
             for name, value in attrs:
@@ -24,8 +20,12 @@ class CustomHTMLParser(HTMLParser):
         if tag in self.tagArray:
             self.capture = False
 
+    def handle_data(self, data):
+        if self.capture:
+            self.data.append(data)
 
-def retrieve_format_book(book):
+
+def get_formatted_book(book, book_key):
     try:
         book_name_parser = CustomHTMLParser(("h2"), ("title"))
         book_name_parser.feed(book)
@@ -43,6 +43,7 @@ def retrieve_format_book(book):
             "book_name": book_name,
             "author": author,
             "description": description,
+            "url": f"/books/{book_key}",
         }
     except Exception as e:
         print(f"Error: {e}, line: {sys.exc_info()[-1].tb_lineno}")
